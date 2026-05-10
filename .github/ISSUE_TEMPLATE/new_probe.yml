@@ -1,0 +1,54 @@
+name: Propose a new probe
+description: A new probe family for bench-audit (e.g. eval-awareness, judge-bias).
+labels: ["enhancement", "probe", "needs-design"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening: see [`docs/probes/`](../../docs/probes/) for the existing probes and [`docs/CONTRIBUTING.md`](../../docs/CONTRIBUTING.md) for the contract a new probe must satisfy.
+  - type: input
+    id: name
+    attributes:
+      label: Probe name (proposal)
+      placeholder: "p7_eval_awareness"
+    validations:
+      required: true
+  - type: textarea
+    id: failure-mode
+    attributes:
+      label: Failure mode it targets
+      description: One paragraph; cite the canonical literature (Goodhart, Krakovna, Skalse, Karwowski, METR, Berkeley, etc.).
+    validations:
+      required: true
+  - type: textarea
+    id: operational-definition
+    attributes:
+      label: Operational definition
+      description: How is this measured? What's the null distribution? What's the calibration target?
+    validations:
+      required: true
+  - type: textarea
+    id: input-output
+    attributes:
+      label: Input / Output
+      description: What does the probe consume? What does it produce? What does the ProbeResult.notes look like?
+    validations:
+      required: true
+  - type: textarea
+    id: known-limitations
+    attributes:
+      label: Known limitations
+      description: What WON'T this probe catch?
+    validations:
+      required: true
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Probe gates
+      options:
+        - label: "Produces a `ProbeResult` with a 95% CI."
+          required: true
+        - label: "Defines a null distribution / control set."
+          required: true
+        - label: "Has a published calibration target from prior work, OR a pre-registered measurement plan."
+          required: true

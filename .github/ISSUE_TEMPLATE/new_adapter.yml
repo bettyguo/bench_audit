@@ -1,0 +1,52 @@
+name: Propose a new benchmark adapter
+description: Add `bench-audit` support for a new benchmark.
+labels: ["enhancement", "adapter"]
+body:
+  - type: input
+    id: benchmark
+    attributes:
+      label: Benchmark name
+      placeholder: "OSWorld / Terminal-Bench / SWE-bench Pro / CAR-bench / FieldWorkArena / other"
+    validations:
+      required: true
+  - type: input
+    id: source-url
+    attributes:
+      label: Source URL (canonical repo or paper)
+      placeholder: "https://github.com/xlang-ai/OSWorld"
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: License of the eval set
+      placeholder: "Apache-2.0 / MIT / CC-BY-NC-4.0 / gated / other"
+    validations:
+      required: true
+  - type: input
+    id: maintainer
+    attributes:
+      label: Maintainer + contact
+      description: Who maintains it? Have they engaged publicly with contamination criticism?
+  - type: dropdown
+    id: eval-set-public
+    attributes:
+      label: Is the eval set publicly available?
+      options:
+        - "Yes"
+        - "Gated (terms acceptance required)"
+        - "Private"
+    validations:
+      required: true
+  - type: textarea
+    id: known-vulns
+    attributes:
+      label: Known contamination / integrity issues
+      description: From Berkeley RDI, METR, or other published audits.
+  - type: checkboxes
+    id: ready
+    attributes:
+      label: Readiness
+      options:
+        - label: "I have a `fixture/<benchmark>/mini/tasks.jsonl` of 5 redistribution-safe tasks ready."
+        - label: "I have an adapter implementation ready or am willing to write one."

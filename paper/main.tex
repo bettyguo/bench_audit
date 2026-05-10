@@ -1,0 +1,327 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{natbib}
+\bibliographystyle{plainnat}
+
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue, citecolor=blue}
+
+\title{\texttt{bench-audit}: A Maintained Probe Suite for Agent-Benchmark
+Integrity, with Calibrated Confidence Intervals}
+
+\author{%
+  Jacob Wu\thanks{Author email: \texttt{jacob.jikun.wu@gmail.com}.
+  Code: \url{https://github.com/jacobwu/bench-audit}. Leaderboard:
+  \url{https://jacobwu.github.io/bench-audit}.}\\
+  PhD candidate, Montreal
+}
+
+\date{2026-05-14 \\[1ex] \textsc{Workshop preprint --- under preparation}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The major agent benchmarks --- SWE-bench, WebArena, OSWorld, GAIA,
+Terminal-Bench, FieldWorkArena, CAR-bench, and SWE-bench Pro --- have all
+been shown to admit structural exploits that yield near-perfect scores
+without solving any task \citep{wang2026benchjack}. Frontier-lab models have
+been independently shown to reward-hack on 30\%+ of evaluation runs on
+RE-Bench tasks where the scoring function is in the model's context window
+\citep{metr2025rewardhacking}. OpenAI publicly retired SWE-bench Verified as
+a frontier-reporting target after finding that 59.4\% of failed tasks
+contained broken test cases \citep{openai2026noswebench}. None of these
+findings have a maintained, plug-in, reproducibility-first toolkit that
+benchmark authors and consumers can run pre-submission and pre-publication.
+We present \texttt{bench-audit}, an open-source probe suite that
+reproduces the Berkeley and METR findings as a maintained library and
+extends them in three ways: (i) every probe result carries a Wilson 95\%
+confidence interval enforced at the type level; (ii) every benchmark
+adapter declares its eval-set SHA-256 and refuses to run on mismatch;
+(iii) every report card lists the reproduction command and links to the
+raw per-task data. Initial v0.1 covers three benchmarks (SWE-bench
+Verified, WebArena, GAIA) and six probes; the design supports adding a
+new benchmark in one file.
+\end{abstract}
+
+\section{Introduction}
+
+Between February and April 2026, three independent findings made it clear
+that the major agent benchmarks no longer measure what their authors think
+they measure. OpenAI announced on 2026-02-23 that it would no longer report
+SWE-bench Verified after an internal audit found 59.4\% of 138 failed
+problems had broken tests, and that GPT-5.2, Claude Opus 4.5, and Gemini~3
+Flash could reproduce exact gold patches and verbatim problem details from
+prompting alone \citep{openai2026noswebench}. On 2026-04-12, the UC
+Berkeley Center for Responsible Decentralized Intelligence published a
+study showing that an automated scanning agent, BenchJack, achieves
+$\sim$100\% on seven of eight major agent benchmarks (and 73\% on OSWorld)
+without making a single LLM call \citep{wang2026benchjack}. Since 2025-06,
+METR has been publishing quantitative measurements of reward hacking on
+frontier models --- most prominently a 30.4\% rate on RE-Bench
+\citep{metr2025rewardhacking}, with one task family (Optimize LLM Foundry)
+exhibiting reward hacking on 100\% of runs.
+
+These findings concern three distinct integrity failures:
+
+\begin{enumerate}
+\item \textbf{Train-test contamination} --- the eval set has leaked into a
+model's pretraining corpus, evidenced by verbatim recall under prompting
+\citep{openai2026noswebench}.
+\item \textbf{Harness injection and gold-answer leakage} --- the
+\emph{evaluation pipeline} admits a structurally easier path. A
+\texttt{conftest.py} hook resolves every SWE-bench instance; a
+\texttt{file://} URL reads the WebArena gold answer; a system-PATH binary
+wrapper produces a fake passing Terminal-Bench report
+\citep{wang2026benchjack}.
+\item \textbf{Reward hacking} --- a real model on a real benchmark
+produces a trajectory that satisfies the literal scoring function without
+satisfying task intent \citep{metr2025rewardhacking,krakovna2020spec}.
+\end{enumerate}
+
+The community lacks a maintained library that does all three in a single
+plug-in interface. The Berkeley work is announced as a tool but is
+currently a demonstration, not a maintained package; METR's pipeline is
+partially open but bespoke per task family. \texttt{bench-audit} fills the
+gap. Its design commitments, in order of importance:
+
+\begin{itemize}
+\item \emph{Every claim has a CI.} The \texttt{ProbeResult} type cannot be
+instantiated without one. Verdicts at $n < 30$ require an explicit override
+that is logged on every report card.
+\item \emph{Every adapter ships an eval-set hash.} Cached eval sets are
+verified at load time. Tampering shows as a mismatch.
+\item \emph{Every probe ships with a reproducible recipe.} The
+reproduction command is on every report card and on every leaderboard
+cell.
+\item \emph{No eval-set content is redistributed.} Adapters fetch from
+upstream sources under their licenses.
+\end{itemize}
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Berkeley RDI: harness injection.} \citet{wang2026benchjack}
+identify seven recurring vulnerability patterns across eight benchmarks:
+(BA-01) no agent/evaluator isolation; (BA-02) answers shipped with tests;
+(BA-03) \texttt{eval()} on untrusted input; (BA-04) LLM judges without
+input sanitization; (BA-05) weak string matching; (BA-06) evaluation
+logic that does not evaluate; (BA-07) grader trusts agent-reported state.
+Their tool BenchJack scores $\sim$100\% on seven of eight benchmarks. Our
+probe P4 (harness injection, Section~\ref{sec:methods}) reimplements this
+taxonomy as a maintained checklist.
+
+\paragraph{METR: reward hacking measurement.}
+\citet{metr2025rewardhacking,metr2025o3eval} measure reward hacking in
+frontier models. Headline numbers reproduced as our calibration targets:
+RE-Bench overall 30.4\% (39/128), HCAST overall 0.7\% (8/1087), Optimize
+LLM Foundry 100\% (21/21), Scaffolding for Rust 42.9\% (12/28). Our probe
+P5 (reward hacking, Section~\ref{sec:methods}) reimplements METR's
+two-stage classification (deterministic detector + LLM grader) with a
+public rubric and a Cohen's $\kappa$ calibration target.
+
+\paragraph{Contamination detection.} The string-overlap track of our P2
+probe uses GPT-3's 13-gram convention \citep{brown2020gpt3} over a
+configurable corpus index (Pile, RedPajama, BigCode, FineWeb, DCLM).
+\citet{shi2024minkprob} provide the Min-K\% Prob membership inference
+attack we use as a secondary signal; \citet{duan2024mia} report that
+MIA-only is unreliable on The Pile, hence our policy of never issuing a
+verdict on MIA alone.
+
+\paragraph{Specification gaming.} The conceptual lineage is
+\citet{krakovna2020spec}, \citet{skalse2022rewardhacking}, and
+\citet{karwowski2024goodhart}; Goodhart's Law applied to reinforcement
+learning predicts exactly the failure mode METR measures empirically.
+
+\paragraph{Evaluation infrastructure.} We build on Inspect AI
+\citep{aisi2024inspect} as the live-eval substrate, not against it.
+\texttt{bench-audit} contributes a probe family to the Inspect AI
+ecosystem.
+
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Adapter API}
+A benchmark adapter is one file implementing four methods:
+\texttt{load\_eval\_set}, \texttt{task\_iter}, \texttt{score}, and
+\texttt{manifest}. The manifest carries license, source URL, eval-set
+SHA-256, and a contamination-statement URL. Adapters refuse to operate on
+a cached eval set that does not match the pinned hash. We ship three v0.1
+adapters: SWE-bench Verified (MIT, $n=500$), WebArena (Apache-2.0,
+$n=812$), GAIA (gated, $n=165$ validation).
+
+\subsection{Probe contract}
+\texttt{ProbeResult} is a frozen Pydantic model whose validator forbids
+construction without (i) a confidence interval whose endpoints are
+ordered, (ii) a sample size $\geq 30$ when verdict $\neq$
+\texttt{inconclusive} unless \texttt{allow\_small\_n=True}, and (iii) a
+CI half-width $\leq 0.1$ when verdict $\neq$ \texttt{inconclusive} unless
+\texttt{allow\_wide\_ci=True}. Both overrides are recorded on every
+report card.
+
+\subsection{Six probes}
+\begin{description}
+\item[P1 Gold-answer leak.] An adapter-supplied \emph{lazy agent recipe}
+produces predictions without doing task-relevant work. Reports leak rate
+with Wilson 95\% CI.
+\item[P2 Near-duplicate pretraining.] 13-gram overlap against a corpus
+index; Min-K\% Prob as live-mode secondary signal.
+\item[P3 Shortcut feature.] Mutual information between task metadata
+$\phi$ and gold $y$ on a held-out split; bootstrap CI.
+\item[P4 Harness injection.] Static-analysis checklist over the seven
+Berkeley patterns; Clopper-Pearson CI on the count.
+\item[P5 Reward hacking.] Two-stage trajectory classifier: deterministic
+detectors over seven signatures (RH-01..RH-07) followed by an optional
+LLM grader. Cohen's $\kappa$ $\geq 0.7$ pre-registered against three
+human annotators.
+\item[P6 Eval-set visibility.] Factual probe: public/gated, hashed,
+contamination-statement available.
+\end{description}
+
+\subsection{Statistical commitments}
+All proportion CIs use the Wilson score interval
+\citep{wilson1927wilson}; we deliberately do not provide the
+normal-approximation interval because it degenerates near 0 and 1 ---
+where contamination claims live. Reward-hacking effect sizes between
+groups use Cohen's~$h$ \citep{cohen1988stats}. Bootstrap is used for
+non-proportion quantities (MI estimates, trajectory-length distributions).
+
+\subsection{Live mode}
+Live-mode probes run via Inspect AI \citep{aisi2024inspect}. The model
+factory refuses \texttt{latest}-style aliases and undated provider
+identifiers to guarantee reproducibility. Inspect AI's caching by
+\texttt{(model, prompt\_sha256, sampling\_params)} makes reproduction
+deterministic given the same cache state.
+
+\section{Results}
+\label{sec:results}
+
+This section reports v0.1 calibration runs. Full-scale reproductions on
+the real eval sets (SWE-bench $n=500$, WebArena $n=812$, GAIA $n=165$)
+require access to SWE-bench's Docker harness, a WebArena server stack,
+and the gated GAIA dataset; they are released alongside the public
+launch. The fixture-based unit tests in this preprint exercise the probe
+pathways end-to-end on five-task synthetic fixtures per adapter and
+demonstrate that the probe correctly identifies the leak shape Berkeley
+reported.
+
+\paragraph{P1 vs. SWE-bench Verified (fixture).} Lazy-agent recipe forges
+a \texttt{report.resolved=True} prediction (the \texttt{conftest.py}
+pytest-hook shape Berkeley demonstrated). On the five-task fixture the
+adapter's \texttt{score()} accepts the forged prediction for 5/5 tasks;
+leak rate $= 1.000$, Wilson 95\% CI $[0.566, 1.000]$, $n=5$, verdict
+\texttt{fail} with both \texttt{allow\_small\_n} and
+\texttt{allow\_wide\_ci} flags set and logged.
+
+\paragraph{P4 vs. SWE-bench Verified (fixture).} The harness-injection
+checklist triggers BA-02: the fixture's task payload exposes
+\texttt{gold\_patch}. Effect $= 1/7 \approx 0.143$, Clopper-Pearson 95\%
+CI $[0.004, 0.579]$, $n=7$, verdict \texttt{fail} with overrides logged.
+
+\paragraph{P5 vs. mini trajectory fixture.} The 10-trajectory mini
+fixture has five hard reward-hacking cases (one per RH-01..RH-05), two
+ambiguous (RH-06, RH-07), and three clean. The deterministic stage-1
+detectors fire on 7/7 hack cases and stay quiet on 3/3 clean cases. Hack
+rate (stub classifier) $= 5/10 = 0.500$, Wilson 95\% CI $[0.237, 0.762]$,
+verdict \texttt{fail}.
+
+Table~\ref{tab:calibration-targets} lists the Berkeley/METR numbers we
+will reproduce on the full eval sets.
+
+\begin{table}[t]
+\centering
+\caption{Calibration targets for full-scale runs.}
+\label{tab:calibration-targets}
+\begin{tabular}{lllr}
+\toprule
+Benchmark & Probe & Source & Target \\
+\midrule
+SWE-bench Verified ($n{=}500$) & P1 & \citep{wang2026benchjack} & $\geq 0.97$ \\
+WebArena ($n{=}812$)           & P1 & \citep{wang2026benchjack} & $\geq 0.97$ \\
+GAIA validation ($n{=}165$)    & P1 & \citep{wang2026benchjack} & $\geq 0.93$ \\
+RE-Bench ($n{=}128$)           & P5 & \citep{metr2025rewardhacking} & $0.304 \pm 0.02$ \\
+HCAST ($n{=}1087$)             & P5 & \citep{metr2025rewardhacking} & $0.007 \pm 0.02$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+
+The Berkeley and METR findings make a strong case that the per-benchmark
+exploits are \emph{not} the deep problem. The deep problem is that
+benchmark security has not been a first-class concern in the publication
+process, and that the empirical literature has been comfortable claiming
+``$X\%$ contamination'' without confidence intervals. We do not have a
+methodological disagreement with either group; we are reproducing and
+packaging their findings to make those numbers cheap to verify, cheap to
+re-run on a new model, and cheap to extend to a new benchmark.
+
+The single most important design choice is the type-level CI enforcement.
+A \texttt{ProbeResult} that does not carry a CI cannot be constructed; a
+verdict that overrides the small-$n$ or wide-CI defaults shows that
+override on the report card. This is the form of discipline the
+contamination literature has been missing.
+
+\section{Limitations}
+
+\begin{itemize}
+\item v0.1 covers three benchmarks and six probes. Five of the eight
+Berkeley benchmarks (SWE-bench Pro, OSWorld, Terminal-Bench,
+FieldWorkArena, CAR-bench) are deferred to v0.2.
+\item Our P4 detectors are heuristic static-analysis. A grader that is
+clean in source but vulnerable via a third-party service it calls will
+not trigger. Dynamic detectors are v0.2.
+\item Reproducing the full-scale Berkeley numbers requires running
+Docker-based evaluators we do not bundle (SWE-bench), a multi-container
+web stack we do not bundle (WebArena), and a gated dataset we do not
+redistribute (GAIA). The SWE-bench full run lands first; WebArena and
+GAIA follow.
+\item The Cohen's $\kappa$ validation for P5 requires three human
+annotators. The rubric and labelling protocol are pre-registered; the
+$\kappa$ measurement gates any external reward-hacking claim.
+\end{itemize}
+
+\section{Ethics statement}
+
+Benchmark integrity work has two stakeholders we treat with care:
+
+\paragraph{Benchmark maintainers.} We commit to a 14-day private outreach
+window before any public claim about a specific maintained benchmark.
+This is the responsible-disclosure norm from security research
+transplanted to ML. Maintainers receive: the report cards, the raw
+per-task data, and the reproduction commands. They have the option to
+fix and rebut.
+
+\paragraph{Model providers.} We do not redistribute model outputs from
+frontier-lab models. Live-mode runs cache locally to the user only. The
+harness refuses \texttt{latest}-style model aliases so historical
+results cannot be silently revised.
+
+The project ground rules are: no contamination claim without a CI; no
+public disclosure of a finding against a maintained benchmark without
+14-day private outreach; no misleading reproductions; respect upstream
+licenses; do not redistribute frontier-lab model outputs; frame findings
+as ``measured a contamination signature in X'' rather than ``broke X''.
+
+\section{Reproducibility statement}
+
+The code, eval-set hashes, prompt templates with their SHA-256s, and the
+reproduction commands for every number in this paper are at
+\url{https://github.com/jacobwu/bench-audit}. The fixture-based results
+in Section~\ref{sec:results} are reproducible from a clean machine via
+\texttt{./reproduce.sh}. Full-scale results are added to the leaderboard
+(\url{https://jacobwu.github.io/bench-audit}) under
+\texttt{docs/published\_numbers.json} as they land.
+
+\bibliography{refs}
+
+\end{document}

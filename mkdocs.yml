@@ -1,0 +1,38 @@
+site_name: bench-audit
+site_description: A probe suite for agent benchmarks: contamination, gold-answer leaks, reward hacking.
+site_url: https://jacobwu.github.io/bench-audit/
+repo_url: https://github.com/jacobwu/bench-audit
+repo_name: jacobwu/bench-audit
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Home: README.md
+  - Architecture: architecture.md
+  - Probes:
+      - Overview: probes/index.md
+      - P1 — Gold-answer leak: probes/p1_gold_answer_leak.md
+      - P4 — Harness injection: probes/p4_harness_injection.md
+      - P5 — Reward hacking: probes/p5_reward_hacking.md
+  - Reproducibility: reproducibility.md
+  - Safety context: safety-context.md
+  - Maintainer outreach: maintainer-outreach.md
+  - Contributing: CONTRIBUTING.md
+  - FAQ: FAQ.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>bench-audit · leaderboard</title>
+<link rel="stylesheet" href="static/leaderboard.css">
+</head>
+<body>
+<header>
+  <h1>bench-audit leaderboard</h1>
+  <p class="subtitle">An automated probe suite that audits agent benchmarks for contamination, gold-answer leaks, and reward hacking — with confidence intervals.</p>
+  <p class="meta">{{ n_results }} result records · matrix of {{ adapters|length }} adapters × {{ probes|length }} probes</p>
+</header>
+
+<section>
+<table class="matrix">
+<thead>
+<tr><th></th>
+{% for probe in probes %}
+<th><a href="probe/{{ probe }}.html">{{ probe }}</a></th>
+{% endfor %}
+</tr>
+</thead>
+<tbody>
+{% for adapter in adapters %}
+<tr>
+<th><a href="benchmark/{{ adapter }}.html">{{ adapter }}</a></th>
+{% for probe in probes %}
+{% set cell = matrix.get((adapter, probe)) %}
+{% if cell %}
+<td class="cell verdict-{{ cell.verdict }}" title="{{ cell.reproduction_command }}">
+<a href="{{ cell.json_url }}">
+<div class="cell-effect">{{ "%.3f"|format(cell.effect_size) }}</div>
+<div class="cell-ci">[{{ "%.3f"|format(cell.ci_low) }}, {{ "%.3f"|format(cell.ci_high) }}]</div>
+<div class="cell-n">n={{ cell.sample_size }}</div>
+</a>
+</td>
+{% else %}
+<td class="cell empty">·</td>
+{% endif %}
+{% endfor %}
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</section>
+
+<footer>
+<p>Every cell links to the raw <code>ProbeResult</code> JSON. The reproduction command is on hover.</p>
+</footer>
+
+</body>
+</html>

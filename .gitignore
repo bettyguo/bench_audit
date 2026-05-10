@@ -1,0 +1,37 @@
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+build/
+dist/
+*.egg-info/
+
+# tests / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# mypy / ruff
+.mypy_cache/
+.ruff_cache/
+
+# env / secrets
+.env
+.env.local
+secrets/
+
+# transient outputs
+_reproduce_out/
+_results/
+_site/
+docs/_build/
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# generated fixtures
+fixtures/**/_generated/

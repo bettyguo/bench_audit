@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>bench-audit · {{ adapter }}</title>
+<link rel="stylesheet" href="../static/leaderboard.css">
+</head>
+<body>
+<header>
+<p><a href="../index.html">← back to matrix</a></p>
+<h1>{{ adapter }}</h1>
+</header>
+<table class="list">
+<thead><tr><th>Probe</th><th>Verdict</th><th>Effect</th><th>95% CI</th><th>n</th><th>Raw</th></tr></thead>
+<tbody>
+{% for cell in cells %}
+<tr class="verdict-{{ cell.verdict }}">
+<td><a href="../probe/{{ cell.probe_name }}.html">{{ cell.probe_name }}</a></td>
+<td>{{ cell.verdict }}</td>
+<td>{{ "%.4f"|format(cell.effect_size) }}</td>
+<td>[{{ "%.4f"|format(cell.ci_low) }}, {{ "%.4f"|format(cell.ci_high) }}]</td>
+<td>{{ cell.sample_size }}</td>
+<td><a href="../{{ cell.json_url }}">json</a></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</body>
+</html>

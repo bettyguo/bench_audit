@@ -1,0 +1,3 @@
+{
+  "_comment": "Reproduction targets keyed by '<adapter_name>::<probe_name>'. Tolerance is ±0.02 absolute by default; override per-key via _tolerance."
+}

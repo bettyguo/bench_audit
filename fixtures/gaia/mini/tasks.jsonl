@@ -1,0 +1,5 @@
+{"task_id": "gaia-001", "Question": "[Synthetic] What year was the first Apollo Moon landing?", "Level": 1, "Final answer": "1969", "file_name": "", "Annotator Metadata": {"Steps": "look up Apollo 11", "Number of steps": "1"}}
+{"task_id": "gaia-002", "Question": "[Synthetic] How many sides does a hexagon have?", "Level": 1, "Final answer": "6", "file_name": "", "Annotator Metadata": {"Steps": "definitional", "Number of steps": "1"}}
+{"task_id": "gaia-003", "Question": "[Synthetic] What is the capital city of Australia?", "Level": 1, "Final answer": "Canberra", "file_name": "", "Annotator Metadata": {"Steps": "look up", "Number of steps": "1"}}
+{"task_id": "gaia-004", "Question": "[Synthetic] What is 12 * 7?", "Level": 1, "Final answer": "84", "file_name": "", "Annotator Metadata": {"Steps": "arithmetic", "Number of steps": "1"}}
+{"task_id": "gaia-005", "Question": "[Synthetic] Name a programming language whose mascot is a gopher.", "Level": 2, "Final answer": "Go", "file_name": "", "Annotator Metadata": {"Steps": "trivia", "Number of steps": "1"}}

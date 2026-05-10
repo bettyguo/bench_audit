@@ -1,0 +1,56 @@
+# bench-audit report card
+
+**{{ m.name }} × {{ r.probe_name }}{% if r.model_name %} × {{ r.model_name }}{% endif %}**
+
+| | |
+|---|---|
+| Verdict | `{{ r.verdict }}` |
+| Effect size | `{{ "%.4f"|format(r.effect_size) }}` ({{ r.effect_size_kind }}) |
+| 95% CI | [{{ "%.4f"|format(r.ci_low) }}, {{ "%.4f"|format(r.ci_high) }}] ({{ r.ci_method }}) |
+| Sample size | {{ r.sample_size }} |
+| Adapter | `{{ r.adapter_name }}@{{ r.adapter_version }}` |
+| Benchmark version | `{{ r.benchmark_version }}` |
+| Probe | `{{ r.probe_name }}@{{ r.probe_version }}` |
+| Model | {% if r.model_name %}`{{ r.model_name }}@{{ r.model_version }}`{% else %}*(n/a; static probe)*{% endif %} |
+| Eval-set SHA-256 | `{{ r.test_set_hash[:16] }}…` |
+| Harness version | `{{ r.harness_version }}` |
+| Timestamp | {{ r.timestamp }} |
+
+## Benchmark
+- **License:** `{{ m.license }}`
+{% if m.license_notes %}
+- **License notes:** {{ m.license_notes }}
+{% endif %}
+- **Source:** {{ m.source_url }}
+{% if m.contamination_statement_url %}
+- **Contamination statement:** {{ m.contamination_statement_url }}
+{% endif %}
+- **Maintainer:** {{ m.maintainer or "n/a" }}
+- **Requires auth:** {{ m.requires_auth }}
+
+## Reproduction
+```bash
+{{ report.reproduction_command }}
+```
+
+{% if report.raw_data_url %}
+[Raw per-task data]({{ report.raw_data_url }})
+{% endif %}
+
+## Interpretation
+{{ report.interpretation }}
+
+{% if r.allow_small_n or r.allow_wide_ci %}
+> ⚠ **Caveats:**
+{% if r.allow_small_n %}> - Verdict issued with `allow_small_n=True`. Sample size: {{ r.sample_size }} (< 30 default threshold).
+{% endif %}
+{% if r.allow_wide_ci %}> - Verdict issued with `allow_wide_ci=True`. CI half-width: {{ "%.3f"|format(r.ci_half_width) }} (> 0.1 default threshold).
+{% endif %}
+{% endif %}
+
+{% if r.notes %}
+## Probe notes
+```
+{{ r.notes }}
+```
+{% endif %}

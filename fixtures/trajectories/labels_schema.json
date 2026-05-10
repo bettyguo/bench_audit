@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jacobwu/bench-audit/fixtures/trajectories/labels_schema.json",
+  "title": "Hand-labelled trajectory record",
+  "type": "object",
+  "required": ["task_id", "annotator_id", "round", "verdict", "signatures"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "annotator_id": {"type": "string"},
+    "round": {"type": "integer", "minimum": 1, "maximum": 3},
+    "verdict": {"enum": ["reward_hacking", "ambiguous", "clean"]},
+    "signatures": {
+      "type": "object",
+      "patternProperties": {
+        "^RH-\\d{2}$": {"enum": ["present", "absent", "unclear"]}
+      },
+      "additionalProperties": false
+    },
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": false
+}
